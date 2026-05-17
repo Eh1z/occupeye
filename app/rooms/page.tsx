@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRoomStore, type LectureHall } from '@/lib/store/useRoomStore'
 import RoomStatusGrid from '@/components/RoomStatusGrid'
 import CCTVTestbed from '@/components/CCTVTestbed'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Circle } from 'lucide-react'
 
 const INITIAL_ROOMS: Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy'>[] = [
   { id: 'room-a', name: 'Room A', capacity: 20, currentOccupants: 0 },
@@ -19,13 +21,17 @@ export default function RoomsPage() {
   const store = useRoomStore()
   const [selectedRoomId, setSelectedRoomId] = useState<string>('room-a')
   const [mounted, setMounted] = useState(false)
+  const initializedRef = useRef(false)
 
   useEffect(() => {
-    if (!Object.keys(store.rooms).length) {
-      store.initializeRooms(INITIAL_ROOMS)
+    if (!initializedRef.current) {
+      initializedRef.current = true
+      if (!Object.keys(store.rooms).length) {
+        store.initializeRooms(INITIAL_ROOMS)
+      }
+      setMounted(true)
     }
-    setMounted(true)
-  }, [store])
+  }, [])
 
   if (!mounted) return null
 
@@ -33,86 +39,109 @@ export default function RoomsPage() {
   const selectedRoom = store.rooms[selectedRoomId] || rooms[0]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      {/* Header */}
-      <div className="border-b border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="px-4 py-6 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Manage Rooms</h1>
-          <p className="mt-2 text-slate-600 dark:text-slate-400">View room status and make bookings</p>
-        </div>
+    <div className="flex h-screen flex-col bg-slate-50 dark:bg-slate-950">
+      {/* Compact Header */}
+      <div className="border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900 md:px-6">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Rooms</h1>
       </div>
 
-      {/* Main Content */}
-      <div className="px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl space-y-8">
-          {/* Room Grid */}
-          <div>
-            <h2 className="mb-4 text-xl font-semibold text-slate-900 dark:text-white">All Rooms</h2>
-            <RoomStatusGrid rooms={rooms} selectedRoomId={selectedRoomId} onSelectRoom={setSelectedRoomId} />
+      {/* Main Content - Two Column */}
+      <div className="flex flex-1 gap-4 overflow-hidden p-4 md:p-6">
+        {/* Left: Room List */}
+        <div className="w-full flex-shrink-0 overflow-y-auto md:w-80">
+          <div className="space-y-2">
+            {rooms.map((room) => (
+              <button
+                key={room.id}
+                onClick={() => setSelectedRoomId(room.id)}
+                className={`w-full rounded-lg border-2 p-3 text-left transition-all ${
+                  selectedRoomId === room.id
+                    ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20'
+                    : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Circle
+                      className={`h-3 w-3 fill-current ${
+                        room.status === 'occupied'
+                          ? 'text-red-500'
+                          : room.isBlockedForBooking
+                            ? 'text-amber-500'
+                            : 'text-green-500'
+                      }`}
+                    />
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-white">{room.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {room.currentOccupants}/{room.capacity}
+                      </p>
+                    </div>
+                  </div>
+                  {room.anomalyDetected && (
+                    <div className="h-2 w-2 rounded-full bg-red-500" title="Anomaly" />
+                  )}
+                </div>
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* Selected Room Details with CCTV */}
+        {/* Right: CCTV Upload & Details */}
+        <div className="flex flex-1 flex-col gap-4 overflow-hidden">
           {selectedRoom && (
-            <div className="grid gap-8 lg:grid-cols-3">
-              {/* Room Info */}
-              <div className="lg:col-span-1">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{selectedRoom.name}</CardTitle>
-                    <CardDescription>Selected for CCTV upload</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+            <>
+              {/* Room Quick Info */}
+              <Card className="flex-shrink-0">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">{selectedRoom.name}</CardTitle>
+                    <Circle
+                      className={`h-3 w-3 fill-current ${
+                        selectedRoom.status === 'occupied'
+                          ? 'text-red-500'
+                          : selectedRoom.isBlockedForBooking
+                            ? 'text-amber-500'
+                            : 'text-green-500'
+                      }`}
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-3 text-center text-sm">
                     <div>
-                      <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Capacity</p>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-white">{selectedRoom.capacity}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">Current</p>
+                      <p className="font-bold text-slate-900 dark:text-white">{selectedRoom.currentOccupants}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Current Occupancy</p>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-white">{selectedRoom.currentOccupants}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">Capacity</p>
+                      <p className="font-bold text-slate-900 dark:text-white">{selectedRoom.capacity}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Status</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <div
-                          className={`h-3 w-3 rounded-full ${
-                            selectedRoom.status === 'occupied'
-                              ? 'bg-red-500'
-                              : selectedRoom.isBlockedForBooking
-                                ? 'bg-amber-500'
-                                : 'bg-green-500'
-                          }`}
-                        />
-                        <span className="font-medium text-slate-900 dark:text-white">
-                          {selectedRoom.status === 'occupied'
-                            ? 'Occupied'
-                            : selectedRoom.isBlockedForBooking
-                              ? 'Blocked'
-                              : 'Available'}
-                        </span>
-                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">Usage</p>
+                      <p className="font-bold text-slate-900 dark:text-white">
+                        {Math.round((selectedRoom.currentOccupants / selectedRoom.capacity) * 100)}%
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* CCTV Testbed */}
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Upload CCTV Image</CardTitle>
-                    <CardDescription>Upload an image to detect occupancy</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <CCTVTestbed
-                      room={selectedRoom}
-                      onDetectionComplete={(occupantCount) => {
-                        store.updateOccupancy(selectedRoom.id, occupantCount)
-                      }}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+              <Card className="flex-1 overflow-hidden">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Upload CCTV</CardTitle>
+                </CardHeader>
+                <CardContent className="overflow-y-auto">
+                  <CCTVTestbed
+                    room={selectedRoom}
+                    onDetectionComplete={(occupantCount) => {
+                      store.updateOccupancy(selectedRoom.id, occupantCount)
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            </>
           )}
         </div>
       </div>

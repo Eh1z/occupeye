@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRoomStore, type LectureHall } from '@/lib/store/useRoomStore'
 import MetricsCard from '@/components/MetricsCard'
@@ -21,11 +21,17 @@ const INITIAL_ROOMS: Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedF
 export default function Dashboard() {
   const store = useRoomStore()
   const [mounted, setMounted] = useState(false)
+  const initializedRef = useRef(false)
 
   useEffect(() => {
-    store.initializeRooms(INITIAL_ROOMS)
-    setMounted(true)
-  }, [store])
+    if (!initializedRef.current) {
+      initializedRef.current = true
+      if (!Object.keys(store.rooms).length) {
+        store.initializeRooms(INITIAL_ROOMS)
+      }
+      setMounted(true)
+    }
+  }, [])
 
   if (!mounted) {
     return (

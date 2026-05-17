@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRoomStore, type LectureHall, type ActivityLog as ActivityLogType } from '@/lib/store/useRoomStore'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -37,13 +37,17 @@ export default function LogsPage() {
   const [filterType, setFilterType] = useState<string>('')
   const [searchText, setSearchText] = useState<string>('')
   const [mounted, setMounted] = useState(false)
+  const initializedRef = useRef(false)
 
   useEffect(() => {
-    if (!Object.keys(store.rooms).length) {
-      store.initializeRooms(INITIAL_ROOMS)
+    if (!initializedRef.current) {
+      initializedRef.current = true
+      if (!Object.keys(store.rooms).length) {
+        store.initializeRooms(INITIAL_ROOMS)
+      }
+      setMounted(true)
     }
-    setMounted(true)
-  }, [store])
+  }, [])
 
   if (!mounted) return null
 
