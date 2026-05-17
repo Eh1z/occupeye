@@ -25,7 +25,7 @@ export default function Dashboard() {
   useEffect(() => {
     store.initializeRooms(INITIAL_ROOMS)
     setMounted(true)
-  }, [store])
+  }, [])
 
   if (!mounted) {
     return (
