@@ -1,7 +1,7 @@
 'use client'
 
 import { ActivityLog } from '@/lib/store/useRoomStore'
-import { AlertTriangle, CheckCircle, Calendar, Users } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Calendar, Users, BookOpen, XCircle } from 'lucide-react'
 
 interface ActivityLogProps {
   logs: ActivityLog[]
@@ -14,10 +14,14 @@ export default function ActivityLogComponent({ logs }: ActivityLogProps) {
         return <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
       case 'anomaly_detected':
         return <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
-      case 'schedule_changed':
-        return <Calendar className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-      case 'cleared':
+      case 'class_booked':
+        return <BookOpen className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+      case 'class_cancelled':
+        return <XCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+      case 'room_available':
         return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+      default:
+        return <Users className="h-4 w-4 text-slate-600 dark:text-slate-400" />
     }
   }
 

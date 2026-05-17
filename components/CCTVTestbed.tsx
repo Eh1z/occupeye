@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { useObjectDetection, type DetectionPrediction } from '@/hooks/useObjectDetection'
 import { LectureHall } from '@/lib/store/useRoomStore'
-import { AlertCircle, Upload, Loader2 } from 'lucide-react'
+import { AlertCircle, Upload, Loader2, Camera, Lightbulb, Clock, Zap, Sparkles, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface CCTVTestbedProps {
@@ -125,7 +125,10 @@ export default function CCTVTestbed({ room, onDetectionComplete }: CCTVTestbedPr
   return (
     <div className="flex flex-col gap-4 rounded-lg border-2 border-slate-300 bg-white p-6 shadow-md dark:border-slate-700 dark:bg-slate-900">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50">📸 Upload Photo</h3>
+        <div className="flex items-center gap-2">
+          <Camera className="h-5 w-5 text-slate-900 dark:text-slate-50" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Upload Photo</h3>
+        </div>
         <span className="rounded-full bg-indigo-100 px-3 py-1 text-sm font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200">
           {room.name}
         </span>
@@ -198,9 +201,10 @@ export default function CCTVTestbed({ room, onDetectionComplete }: CCTVTestbedPr
             <div>
               <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">Model Loading...</p>
               <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">{detectionError}</p>
-              <p className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
-                💡 This usually takes 30-60 seconds on first load. Please wait...
-              </p>
+              <div className="mt-2 flex items-center gap-2 text-xs text-yellow-600 dark:text-yellow-400">
+                <Lightbulb className="h-4 w-4" />
+                This usually takes 30-60 seconds on first load. Please wait...
+              </div>
             </div>
           </div>
         </div>
@@ -229,23 +233,40 @@ export default function CCTVTestbed({ room, onDetectionComplete }: CCTVTestbedPr
         size="lg"
       >
         {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        {!isReady && !previewUrl
-          ? '⏳ Loading AI...'
-          : !previewUrl
-            ? '📸 Upload Photo First'
-            : isProcessing
-              ? '🔍 Analyzing Photo...'
-              : '✨ Detect Occupants'}
+        {!isReady && !previewUrl ? (
+          <>
+            <Clock className="mr-2 h-4 w-4" />
+            Loading AI...
+          </>
+        ) : !previewUrl ? (
+          <>
+            <Camera className="mr-2 h-4 w-4" />
+            Upload Photo First
+          </>
+        ) : isProcessing ? (
+          <>
+            <Zap className="mr-2 h-4 w-4" />
+            Analyzing Photo...
+          </>
+        ) : (
+          <>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Detect Occupants
+          </>
+        )}
       </Button>
 
       {/* Helper Text */}
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
-        <p className="text-xs font-medium text-slate-600 dark:text-slate-400">📝 What happens:</p>
-        <ul className="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-400">
-          <li>1️⃣ AI scans the photo for people</li>
-          <li>2️⃣ Shows green boxes around each person</li>
-          <li>3️⃣ Automatically updates room occupancy</li>
-        </ul>
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+          <FileText className="h-4 w-4" />
+          What happens:
+        </div>
+        <ol className="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-400">
+          <li>1. AI scans the photo for people</li>
+          <li>2. Shows green boxes around each person</li>
+          <li>3. Automatically updates room occupancy</li>
+        </ol>
       </div>
     </div>
   )

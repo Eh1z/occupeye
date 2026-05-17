@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { LectureHall, useRoomStore } from '@/lib/store/useRoomStore'
-import { AlertTriangle, Clock, BookOpen, X } from 'lucide-react'
+import { AlertTriangle, Clock, BookOpen, X, Circle, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface RoomStatusGridProps {
@@ -80,10 +80,10 @@ export default function RoomStatusGrid({ rooms, selectedRoomId, onSelectRoom }: 
                 />
                 <span className="font-bold text-slate-900 dark:text-slate-50">
                   {room.status === 'occupied'
-                    ? '🔴 OCCUPIED'
+                    ? 'OCCUPIED'
                     : room.isBlockedForBooking
-                      ? '🟡 BLOCKED'
-                      : '🟢 AVAILABLE'}
+                      ? 'BLOCKED'
+                      : 'AVAILABLE'}
                 </span>
               </div>
 
@@ -106,9 +106,12 @@ export default function RoomStatusGrid({ rooms, selectedRoomId, onSelectRoom }: 
             {/* Current Booking */}
             {room.currentBooking && (
               <div className="rounded-lg bg-blue-100 p-3 dark:bg-blue-900/30">
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                  📅 {room.currentBooking.className}
-                </p>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    {room.currentBooking.className}
+                  </p>
+                </div>
                 <p className="text-xs text-blue-700 dark:text-blue-300">{room.currentBooking.instructor}</p>
               </div>
             )}
