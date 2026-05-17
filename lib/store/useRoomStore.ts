@@ -1,15 +1,26 @@
 import { create } from 'zustand'
 
+export interface Booking {
+  id: string
+  roomId: string
+  className: string
+  instructor: string
+  bookedAt: number
+  blockedUntil: number // Room unavailable for booking until this time (occupancy detection time + 2 hours)
+}
+
 export interface LectureHall {
   id: string
   name: string
   capacity: number
   currentOccupants: number
-  status: 'empty' | 'occupied' | 'overcrowded'
-  manuallyScheduled: boolean
-  anomalyDetected: boolean
-  lastUpdated: number
-  lastUpdatedBy?: 'manual' | 'simulation'
+  status: 'empty' | 'occupied'
+  lastOccupancyUpdate: number // When occupancy was last detected
+  lastOccupancyUpdateBy: 'manual' | 'simulation'
+  currentBooking: Booking | null // Current class booked in this room
+  isBlockedForBooking: boolean // True if occupied or within 2 hour buffer
+  blockedUntil: number // When room becomes available for booking
+  anomalyDetected: boolean // Occupied but not booked
 }
 
 export interface ActivityLog {
@@ -17,7 +28,7 @@ export interface ActivityLog {
   timestamp: number
   roomId: string
   roomName: string
-  eventType: 'occupancy_detected' | 'anomaly_detected' | 'schedule_changed' | 'cleared'
+  eventType: 'occupancy_detected' | 'class_booked' | 'class_cancelled' | 'anomaly_detected' | 'room_available'
   message: string
   occupantCount?: number
 }
@@ -26,30 +37,25 @@ interface RoomStoreState {
   rooms: Record<string, LectureHall>
   activityLog: ActivityLog[]
 
-  // Actions
-  initializeRooms: (halls: Omit<LectureHall, 'status' | 'anomalyDetected' | 'lastUpdated' | 'lastUpdatedBy'>[]) => void
+  // Initialization
+  initializeRooms: (halls: Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy'>[]) => void
+
+  // Occupancy (from CCTV detection)
   updateOccupancy: (roomId: string, occupantCount: number) => void
-  setScheduled: (roomId: string, isScheduled: boolean) => void
-  clearAnomaly: (roomId: string) => void
-  addActivityLog: (event: Omit<ActivityLog, 'id'>) => void
+
+  // Booking actions
+  bookClass: (roomId: string, className: string, instructor: string) => void
+  cancelBooking: (roomId: string, bookingId: string) => void
 
   // Computed getters
   getTotalHalls: () => number
-  getActiveOccupancy: () => number
-  getAnomalyRate: () => number
-  getRoomsByStatus: (status: LectureHall['status']) => LectureHall[]
+  getOccupiedRooms: () => LectureHall[]
+  getAvailableRooms: () => LectureHall[]
+  getBlockedRooms: () => LectureHall[]
   getRecentLogs: (count?: number) => ActivityLog[]
 }
 
-const computeStatus = (currentOccupants: number, capacity: number): LectureHall['status'] => {
-  if (currentOccupants >= capacity) return 'overcrowded'
-  if (currentOccupants > 0) return 'occupied'
-  return 'empty'
-}
-
-const computeAnomaly = (occupants: number, scheduled: boolean): boolean => {
-  return (scheduled && occupants === 0) || (!scheduled && occupants > 0)
-}
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000
 
 export const useRoomStore = create<RoomStoreState>((set, get) => ({
   rooms: {},
@@ -58,14 +64,15 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
   initializeRooms: (halls) => {
     const initialRooms: Record<string, LectureHall> = {}
     halls.forEach((hall) => {
-      const status = computeStatus(hall.currentOccupants, hall.capacity)
-      const anomalyDetected = computeAnomaly(hall.currentOccupants, hall.manuallyScheduled)
       initialRooms[hall.id] = {
         ...hall,
-        status,
-        anomalyDetected,
-        lastUpdated: Date.now(),
-        lastUpdatedBy: 'manual',
+        status: 'empty',
+        currentBooking: null,
+        isBlockedForBooking: false,
+        blockedUntil: 0,
+        anomalyDetected: false,
+        lastOccupancyUpdate: Date.now(),
+        lastOccupancyUpdateBy: 'manual',
       }
     })
     set({ rooms: initialRooms })
@@ -76,167 +83,133 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
       const room = state.rooms[roomId]
       if (!room) return state
 
-      const newStatus = computeStatus(occupantCount, room.capacity)
-      const newAnomaly = computeAnomaly(occupantCount, room.manuallyScheduled)
-      const wasAnomaly = room.anomalyDetected
+      const now = Date.now()
+      const wasOccupied = room.status === 'occupied'
+      const isNowOccupied = occupantCount > 0
+      const blockedUntilTime = isNowOccupied ? now + TWO_HOURS_MS : now
+
+      const newAnomaly = isNowOccupied && !room.currentBooking
 
       const updatedRoom: LectureHall = {
         ...room,
         currentOccupants: occupantCount,
-        status: newStatus,
+        status: isNowOccupied ? 'occupied' : 'empty',
+        lastOccupancyUpdate: now,
+        lastOccupancyUpdateBy: 'simulation',
+        isBlockedForBooking: isNowOccupied,
+        blockedUntil: blockedUntilTime,
         anomalyDetected: newAnomaly,
-        lastUpdated: Date.now(),
-        lastUpdatedBy: 'simulation',
       }
 
       const newRooms = { ...state.rooms, [roomId]: updatedRoom }
+      let newLogs = [...state.activityLog]
 
-      // Create activity log entry
-      const logEntry: ActivityLog = {
-        id: `log_${Date.now()}_${Math.random()}`,
-        timestamp: Date.now(),
-        roomId,
-        roomName: room.name,
-        eventType: 'occupancy_detected',
-        message: `${room.name}: ${occupantCount} persons detected`,
-        occupantCount,
+      // Log occupancy change
+      if (isNowOccupied !== wasOccupied) {
+        const logEntry: ActivityLog = {
+          id: `log_${Date.now()}_${Math.random()}`,
+          timestamp: now,
+          roomId,
+          roomName: room.name,
+          eventType: 'occupancy_detected',
+          message: isNowOccupied
+            ? `${room.name}: Occupied by ${occupantCount} persons. Available for booking in 2 hours.`
+            : `${room.name}: Now empty. Available for immediate booking.`,
+          occupantCount,
+        }
+        newLogs = [logEntry, ...newLogs]
       }
 
-      let newLogs = [logEntry, ...state.activityLog]
-      if (newLogs.length > 100) {
-        newLogs = newLogs.slice(0, 100)
-      }
-
-      // Add anomaly detection log if anomaly state changed
-      if (newAnomaly && !wasAnomaly) {
+      // Log anomaly if unbooked occupancy detected
+      if (newAnomaly && !room.anomalyDetected) {
         const anomalyLog: ActivityLog = {
           id: `log_${Date.now()}_${Math.random()}`,
-          timestamp: Date.now(),
+          timestamp: now,
           roomId,
           roomName: room.name,
           eventType: 'anomaly_detected',
-          message: `⚠️ Anomaly in ${room.name}: ${room.manuallyScheduled ? 'Scheduled but empty' : 'Unscheduled occupancy'}`,
+          message: `⚠️ ${room.name}: Occupied but NOT booked. Unexpected usage!`,
         }
         newLogs = [anomalyLog, ...newLogs]
-        if (newLogs.length > 100) {
-          newLogs = newLogs.slice(0, 100)
-        }
       }
+
+      if (newLogs.length > 100) newLogs = newLogs.slice(0, 100)
 
       return { rooms: newRooms, activityLog: newLogs }
     })
   },
 
-  setScheduled: (roomId, isScheduled) => {
+  bookClass: (roomId, className, instructor) => {
     set((state) => {
       const room = state.rooms[roomId]
       if (!room) return state
 
-      const newAnomaly = computeAnomaly(room.currentOccupants, isScheduled)
-      const wasAnomaly = room.anomalyDetected
+      // Can't book if occupied or blocked
+      if (room.isBlockedForBooking) {
+        alert(`Cannot book: ${room.name} is blocked until ${new Date(room.blockedUntil).toLocaleTimeString()}`)
+        return state
+      }
+
+      const now = Date.now()
+      const booking: Booking = {
+        id: `booking_${now}_${Math.random()}`,
+        roomId,
+        className,
+        instructor,
+        bookedAt: now,
+        blockedUntil: room.blockedUntil,
+      }
 
       const updatedRoom: LectureHall = {
         ...room,
-        manuallyScheduled: isScheduled,
-        anomalyDetected: newAnomaly,
-        lastUpdated: Date.now(),
-        lastUpdatedBy: 'manual',
+        currentBooking: booking,
       }
-
-      const newRooms = { ...state.rooms, [roomId]: updatedRoom }
 
       const logEntry: ActivityLog = {
         id: `log_${Date.now()}_${Math.random()}`,
-        timestamp: Date.now(),
+        timestamp: now,
         roomId,
         roomName: room.name,
-        eventType: 'schedule_changed',
-        message: `${room.name}: ${isScheduled ? 'Marked as scheduled' : 'Marked as unscheduled'}`,
+        eventType: 'class_booked',
+        message: `📅 ${className} by ${instructor} booked in ${room.name}`,
       }
 
       let newLogs = [logEntry, ...state.activityLog]
-      if (newLogs.length > 100) {
-        newLogs = newLogs.slice(0, 100)
-      }
+      if (newLogs.length > 100) newLogs = newLogs.slice(0, 100)
 
-      // Log anomaly change if needed
-      if (newAnomaly && !wasAnomaly) {
-        const anomalyLog: ActivityLog = {
-          id: `log_${Date.now()}_${Math.random()}`,
-          timestamp: Date.now(),
-          roomId,
-          roomName: room.name,
-          eventType: 'anomaly_detected',
-          message: `⚠️ Anomaly in ${room.name}: ${isScheduled ? 'Scheduled but empty' : 'Unscheduled occupancy'}`,
-        }
-        newLogs = [anomalyLog, ...newLogs]
-        if (newLogs.length > 100) {
-          newLogs = newLogs.slice(0, 100)
-        }
-      } else if (!newAnomaly && wasAnomaly) {
-        const clearedLog: ActivityLog = {
-          id: `log_${Date.now()}_${Math.random()}`,
-          timestamp: Date.now(),
-          roomId,
-          roomName: room.name,
-          eventType: 'cleared',
-          message: `✓ Anomaly cleared in ${room.name}`,
-        }
-        newLogs = [clearedLog, ...newLogs]
-        if (newLogs.length > 100) {
-          newLogs = newLogs.slice(0, 100)
-        }
+      return {
+        rooms: { ...state.rooms, [roomId]: updatedRoom },
+        activityLog: newLogs,
       }
-
-      return { rooms: newRooms, activityLog: newLogs }
     })
   },
 
-  clearAnomaly: (roomId) => {
+  cancelBooking: (roomId, bookingId) => {
     set((state) => {
       const room = state.rooms[roomId]
-      if (!room || !room.anomalyDetected) return state
+      if (!room || !room.currentBooking || room.currentBooking.id !== bookingId) return state
 
       const updatedRoom: LectureHall = {
         ...room,
-        anomalyDetected: false,
-        lastUpdated: Date.now(),
-        lastUpdatedBy: 'manual',
+        currentBooking: null,
       }
-
-      const newRooms = { ...state.rooms, [roomId]: updatedRoom }
 
       const logEntry: ActivityLog = {
         id: `log_${Date.now()}_${Math.random()}`,
         timestamp: Date.now(),
         roomId,
         roomName: room.name,
-        eventType: 'cleared',
-        message: `✓ Anomaly acknowledged in ${room.name}`,
+        eventType: 'class_cancelled',
+        message: `❌ ${room.currentBooking.className} cancelled in ${room.name}`,
       }
 
       let newLogs = [logEntry, ...state.activityLog]
-      if (newLogs.length > 100) {
-        newLogs = newLogs.slice(0, 100)
+      if (newLogs.length > 100) newLogs = newLogs.slice(0, 100)
+
+      return {
+        rooms: { ...state.rooms, [roomId]: updatedRoom },
+        activityLog: newLogs,
       }
-
-      return { rooms: newRooms, activityLog: newLogs }
-    })
-  },
-
-  addActivityLog: (event) => {
-    set((state) => {
-      const logEntry: ActivityLog = {
-        id: `log_${Date.now()}_${Math.random()}`,
-        ...event,
-      }
-
-      let newLogs = [logEntry, ...state.activityLog]
-      if (newLogs.length > 100) {
-        newLogs = newLogs.slice(0, 100)
-      }
-
-      return { activityLog: newLogs }
     })
   },
 
@@ -244,19 +217,16 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
     return Object.keys(get().rooms).length
   },
 
-  getActiveOccupancy: () => {
-    return Object.values(get().rooms).reduce((sum, room) => sum + room.currentOccupants, 0)
+  getOccupiedRooms: () => {
+    return Object.values(get().rooms).filter((r) => r.status === 'occupied')
   },
 
-  getAnomalyRate: () => {
-    const rooms = Object.values(get().rooms)
-    if (rooms.length === 0) return 0
-    const anomalies = rooms.filter((r) => r.anomalyDetected).length
-    return (anomalies / rooms.length) * 100
+  getAvailableRooms: () => {
+    return Object.values(get().rooms).filter((r) => !r.isBlockedForBooking)
   },
 
-  getRoomsByStatus: (status) => {
-    return Object.values(get().rooms).filter((room) => room.status === status)
+  getBlockedRooms: () => {
+    return Object.values(get().rooms).filter((r) => r.isBlockedForBooking)
   },
 
   getRecentLogs: (count = 20) => {

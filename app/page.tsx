@@ -8,13 +8,13 @@ import ActivityLog from '@/components/ActivityLog'
 import CCTVTestbed from '@/components/CCTVTestbed'
 import { BookOpen, Zap, TrendingUp } from 'lucide-react'
 
-const INITIAL_ROOMS: Omit<LectureHall, 'status' | 'anomalyDetected' | 'lastUpdated' | 'lastUpdatedBy'>[] = [
-  { id: 'room-a', name: 'Room A - Physics 101', capacity: 20, currentOccupants: 0, manuallyScheduled: false },
-  { id: 'room-b', name: 'Room B - Mathematics', capacity: 30, currentOccupants: 0, manuallyScheduled: false },
-  { id: 'room-c', name: 'Room C - Chemistry Lab', capacity: 25, currentOccupants: 0, manuallyScheduled: false },
-  { id: 'room-d', name: 'Room D - Biology', capacity: 35, currentOccupants: 0, manuallyScheduled: false },
-  { id: 'room-e', name: 'Room E - English Lit', capacity: 40, currentOccupants: 0, manuallyScheduled: false },
-  { id: 'room-f', name: 'Room F - History', capacity: 28, currentOccupants: 0, manuallyScheduled: false },
+const INITIAL_ROOMS: Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy'>[] = [
+  { id: 'room-a', name: 'Room A', capacity: 20, currentOccupants: 0 },
+  { id: 'room-b', name: 'Room B', capacity: 30, currentOccupants: 0 },
+  { id: 'room-c', name: 'Room C', capacity: 25, currentOccupants: 0 },
+  { id: 'room-d', name: 'Room D', capacity: 35, currentOccupants: 0 },
+  { id: 'room-e', name: 'Room E', capacity: 40, currentOccupants: 0 },
+  { id: 'room-f', name: 'Room F', capacity: 28, currentOccupants: 0 },
 ]
 
 export default function Dashboard() {
@@ -42,13 +42,13 @@ export default function Dashboard() {
   const selectedRoom = store.rooms[selectedRoomId] || rooms[0]
   const metrics = {
     totalHalls: store.getTotalHalls(),
-    activeOccupancy: store.getActiveOccupancy(),
-    anomalyRate: store.getAnomalyRate(),
+    occupiedHalls: store.getOccupiedRooms().length,
+    availableHalls: store.getAvailableRooms().length,
   }
   const recentLogs = store.getRecentLogs(20)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       {/* Header */}
       <div className="border-b border-slate-200 bg-white shadow-md dark:border-slate-800 dark:bg-slate-900">
         <div className="mx-auto max-w-7xl p-4  sm:px-6 lg:px-8">
@@ -72,8 +72,8 @@ export default function Dashboard() {
               <h2 className="mb-4 text-2xl font-bold text-slate-900 dark:text-white">Dashboard Overview</h2>
               <MetricsCard
                 totalHalls={metrics.totalHalls}
-                activeOccupancy={metrics.activeOccupancy}
-                anomalyRate={metrics.anomalyRate}
+                occupiedHalls={metrics.occupiedHalls}
+                availableHalls={metrics.availableHalls}
               />
             </div>
 
@@ -82,19 +82,19 @@ export default function Dashboard() {
               <h3 className="mb-3 font-semibold text-blue-900 dark:text-blue-100">👉 How to Use:</h3>
               <ol className="space-y-2 text-sm text-blue-800 dark:text-blue-300">
                 <li>
-                  <strong>1. Select a Room:</strong> Click any room card below to select it (it will highlight in blue)
+                  <strong>1. Upload CCTV:</strong> Drag a hall photo into the CCTV testbed (right panel)
                 </li>
                 <li>
-                  <strong>2. Upload Image:</strong> Drag a classroom photo into the upload area on the right
+                  <strong>2. Run Detection:</strong> Click "Detect Occupants" button
                 </li>
                 <li>
-                  <strong>3. Run Detection:</strong> Click the "Detect Occupants" button to count people
+                  <strong>3. Check Status:</strong> See if room is FREE (🟢) or OCCUPIED (🔴)
                 </li>
                 <li>
-                  <strong>4. Watch Updates:</strong> See occupancy count, status, and alerts update in real-time
+                  <strong>4. Book if Free:</strong> Click "Book Class" if available
                 </li>
                 <li>
-                  <strong>5. Try More Rooms:</strong> Select a different room and repeat to test multiple halls
+                  <strong>5. 2-Hour Block:</strong> If occupied, room blocked for 2 hours
                 </li>
               </ol>
             </div>
