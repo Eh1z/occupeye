@@ -123,10 +123,10 @@ export default function CCTVTestbed({ room, onDetectionComplete }: CCTVTestbedPr
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-black">
+    <div className="flex flex-col gap-4 rounded-lg border-2 border-slate-300 bg-white p-6 shadow-md dark:border-slate-700 dark:bg-slate-900">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">CCTV Test Module</h3>
-        <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-200">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50">📸 Upload Photo</h3>
+        <span className="rounded-full bg-indigo-100 px-3 py-1 text-sm font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200">
           {room.name}
         </span>
       </div>
@@ -137,18 +137,18 @@ export default function CCTVTestbed({ room, onDetectionComplete }: CCTVTestbedPr
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed py-12 transition-colors ${
+        className={`flex flex-col items-center justify-center gap-3 rounded-lg border-3 border-dashed py-16 transition-all ${
           isDragging
-            ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20'
-            : 'border-zinc-300 bg-zinc-50 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-900/50 dark:hover:bg-zinc-900'
+            ? 'border-green-500 bg-green-50 dark:border-green-400 dark:bg-green-900/20'
+            : 'border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 dark:border-slate-600 dark:bg-slate-800 dark:hover:border-blue-400 dark:hover:bg-slate-800/50'
         } cursor-pointer`}
       >
-        <Upload className="h-8 w-8 text-zinc-400" />
+        <Upload className="h-12 w-12 text-slate-400" />
         <div className="text-center">
-          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            {imageFile ? imageFile.name : 'Drop CCTV image or click to upload'}
+          <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+            {imageFile ? `✓ ${imageFile.name}` : 'Drag photo here or click to browse'}
           </p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">PNG, JPG, GIF up to 10MB</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Any image with people (classroom, meeting, crowd, etc.)</p>
         </div>
       </div>
 
@@ -169,6 +169,7 @@ export default function CCTVTestbed({ room, onDetectionComplete }: CCTVTestbedPr
             alt="Preview"
             className="w-full rounded-lg object-contain"
             style={{ maxHeight: '400px' }}
+            onLoad={() => console.log('Image loaded for detection')}
           />
           <canvas
             ref={canvasRef}
@@ -179,29 +180,43 @@ export default function CCTVTestbed({ room, onDetectionComplete }: CCTVTestbedPr
 
       {/* Detection Result */}
       {detectionResult && (
-        <div className="rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
-          <p className="text-sm font-medium text-green-700 dark:text-green-300">
-            ✓ Detection Complete: <span className="text-lg font-bold">{detectionResult.count}</span> persons detected
+        <div className="rounded-lg bg-green-100 p-4 dark:bg-green-900/30">
+          <p className="text-sm font-bold text-green-700 dark:text-green-300">
+            ✓ Success! Detected: <span className="text-2xl">{detectionResult.count}</span> persons
+          </p>
+          <p className="mt-2 text-xs text-green-600 dark:text-green-400">
+            Green boxes show detected people. The room status below will update automatically.
           </p>
         </div>
       )}
 
       {/* Error States */}
       {detectionError && (
-        <div className="rounded-lg bg-red-50 p-4 dark:bg-red-900/20">
+        <div className="rounded-lg bg-yellow-100 p-4 dark:bg-yellow-900/30">
           <div className="flex gap-2">
-            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-            <p className="text-sm text-red-700 dark:text-red-300">{detectionError}</p>
+            <AlertCircle className="h-5 w-5 flex-shrink-0 text-yellow-600 dark:text-yellow-400" />
+            <div>
+              <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">Model Loading...</p>
+              <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">{detectionError}</p>
+              <p className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
+                💡 This usually takes 30-60 seconds on first load. Please wait...
+              </p>
+            </div>
           </div>
         </div>
       )}
 
       {/* Loading State */}
-      {!isReady && (
-        <div className="rounded-lg bg-amber-50 p-4 dark:bg-amber-900/20">
-          <div className="flex gap-2">
-            <Loader2 className="h-5 w-5 animate-spin text-amber-600 dark:text-amber-400" />
-            <p className="text-sm text-amber-700 dark:text-amber-300">Loading AI model...</p>
+      {!isReady && !detectionError && (
+        <div className="rounded-lg bg-blue-100 p-4 dark:bg-blue-900/30">
+          <div className="flex gap-3">
+            <Loader2 className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Loading AI Model...</p>
+              <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                Initializing computer vision model on first use. This may take a minute...
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -210,12 +225,28 @@ export default function CCTVTestbed({ room, onDetectionComplete }: CCTVTestbedPr
       <Button
         onClick={handleDetect}
         disabled={!previewUrl || !isReady || isProcessing}
-        className="w-full"
+        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 disabled:from-slate-400 disabled:to-slate-400"
         size="lg"
       >
         {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        {isProcessing ? 'Analyzing...' : 'Detect Occupants'}
+        {!isReady && !previewUrl
+          ? '⏳ Loading AI...'
+          : !previewUrl
+            ? '📸 Upload Photo First'
+            : isProcessing
+              ? '🔍 Analyzing Photo...'
+              : '✨ Detect Occupants'}
       </Button>
+
+      {/* Helper Text */}
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
+        <p className="text-xs font-medium text-slate-600 dark:text-slate-400">📝 What happens:</p>
+        <ul className="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-400">
+          <li>1️⃣ AI scans the photo for people</li>
+          <li>2️⃣ Shows green boxes around each person</li>
+          <li>3️⃣ Automatically updates room occupancy</li>
+        </ul>
+      </div>
     </div>
   )
 }

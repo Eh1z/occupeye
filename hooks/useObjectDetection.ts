@@ -34,6 +34,9 @@ export function useObjectDetection(): UseObjectDetectionReturn {
         setIsLoading(true)
         setError(null)
 
+        // Ensure TensorFlow backend is set
+        await tf.ready()
+
         // Load the COCO-SSD model
         const model = await cocoSsd.load()
         modelRef.current = model
@@ -41,7 +44,8 @@ export function useObjectDetection(): UseObjectDetectionReturn {
         setIsLoading(false)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load detection model'
-        setError(errorMessage)
+        console.error('Model loading error:', errorMessage)
+        setError(`AI model loading: ${errorMessage}`)
         setIsLoading(false)
       }
     }
@@ -89,3 +93,4 @@ export function useObjectDetection(): UseObjectDetectionReturn {
     detectOccupants,
   }
 }
+
