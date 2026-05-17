@@ -1,65 +1,101 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useEffect, useState } from 'react'
+import { useRoomStore, type LectureHall } from '@/lib/store/useRoomStore'
+import MetricsCard from '@/components/MetricsCard'
+import RoomStatusGrid from '@/components/RoomStatusGrid'
+import ActivityLog from '@/components/ActivityLog'
+import CCTVTestbed from '@/components/CCTVTestbed'
+
+const INITIAL_ROOMS: Omit<LectureHall, 'status' | 'anomalyDetected' | 'lastUpdated' | 'lastUpdatedBy'>[] = [
+  { id: 'room-a', name: 'Lecture Hall A', capacity: 20, currentOccupants: 0, manuallyScheduled: false },
+  { id: 'room-b', name: 'Lecture Hall B', capacity: 30, currentOccupants: 0, manuallyScheduled: false },
+  { id: 'room-c', name: 'Lecture Hall C', capacity: 25, currentOccupants: 0, manuallyScheduled: false },
+  { id: 'room-d', name: 'Lecture Hall D', capacity: 35, currentOccupants: 0, manuallyScheduled: false },
+  { id: 'room-e', name: 'Lecture Hall E', capacity: 40, currentOccupants: 0, manuallyScheduled: false },
+  { id: 'room-f', name: 'Lecture Hall F', capacity: 28, currentOccupants: 0, manuallyScheduled: false },
+]
+
+export default function Dashboard() {
+  const store = useRoomStore()
+  const [selectedRoomId, setSelectedRoomId] = useState<string>('room-a')
+  const [mounted, setMounted] = useState(false)
+
+  // Initialize rooms on mount
+  useEffect(() => {
+    store.initializeRooms(INITIAL_ROOMS)
+    setMounted(true)
+  }, [store])
+
+  if (!mounted) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-600 dark:border-zinc-700 dark:border-t-blue-400" />
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  const rooms = Object.values(store.rooms)
+  const selectedRoom = store.rooms[selectedRoomId] || rooms[0]
+  const metrics = {
+    totalHalls: store.getTotalHalls(),
+    activeOccupancy: store.getActiveOccupancy(),
+    anomalyRate: store.getAnomalyRate(),
+  }
+  const recentLogs = store.getRecentLogs(20)
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      {/* Header */}
+      <div className="border-b border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-black">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Lecture Hall Occupancy System</h1>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Real-time monitoring and CCTV-based occupancy detection with anomaly alerts
+            </p>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      </div>
+
+      {/* Main Content */}
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-3">
+          {/* Left Column: Analytics & Monitoring */}
+          <div className="space-y-6 lg:col-span-2">
+            {/* Metrics */}
+            <MetricsCard
+              totalHalls={metrics.totalHalls}
+              activeOccupancy={metrics.activeOccupancy}
+              anomalyRate={metrics.anomalyRate}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+            {/* Room Status Grid */}
+            <div>
+              <h2 className="mb-4 text-xl font-bold text-zinc-900 dark:text-zinc-50">Room Status</h2>
+              <RoomStatusGrid rooms={rooms} selectedRoomId={selectedRoomId} onSelectRoom={setSelectedRoomId} />
+            </div>
+
+            {/* Activity Log */}
+            <ActivityLog logs={recentLogs} />
+          </div>
+
+          {/* Right Column: CCTV Testbed */}
+          <div className="h-fit">
+            {selectedRoom && (
+              <CCTVTestbed
+                room={selectedRoom}
+                onDetectionComplete={(occupantCount) => {
+                  store.updateOccupancy(selectedRoom.id, occupantCount)
+                }}
+              />
+            )}
+          </div>
         </div>
-      </main>
+      </div>
     </div>
-  );
+  )
 }
