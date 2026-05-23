@@ -26,12 +26,11 @@ if (!mongoUri) {
 }
 
 const client = mongoUri ? new MongoClient(mongoUri) : (null as unknown as MongoClient);
-const database = mongoUri ? client.db() : undefined;
 
 export const auth = betterAuth({
   baseURL,
   ...(mongoUri
-    ? { database: mongodbAdapter(database, { client }) }
+    ? { database: mongodbAdapter(client.db(), { client }) }
     : {}),
   experimental: {
     joins: true,
