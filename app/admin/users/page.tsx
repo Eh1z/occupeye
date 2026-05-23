@@ -2,9 +2,9 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import type { AuthRole } from '@/lib/auth'
-import RoomsClient from '@/components/rooms/RoomsClient'
+import AdminUsersClient from '@/components/admin/AdminUsersClient'
 
-export default async function RoomsPage() {
+export default async function AdminUsersPage() {
   const session = await auth.api.getSession({
     headers: await headers(),
   })
@@ -13,5 +13,9 @@ export default async function RoomsPage() {
     redirect('/sign-in')
   }
 
-  return <RoomsClient role={session.user.role as AuthRole} />
+  if (session.user.role !== 'admin') {
+    redirect('/')
+  }
+
+  return <AdminUsersClient role={session.user.role as AuthRole} />
 }

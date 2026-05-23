@@ -128,7 +128,7 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
           roomId,
           roomName: room.name,
           eventType: 'anomaly_detected',
-          message: `⚠️ ${room.name}: Occupied but NOT booked. Unexpected usage!`,
+          message: `${room.name}: Occupied but not booked. Unexpected usage!`,
         }
         newLogs = [anomalyLog, ...newLogs]
       }
@@ -171,7 +171,7 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
         roomId,
         roomName: room.name,
         eventType: 'class_booked',
-        message: `📅 ${className} by ${instructor} booked in ${room.name}`,
+        message: `${className} by ${instructor} booked in ${room.name}`,
       }
 
       let newLogs = [logEntry, ...state.activityLog]
@@ -200,7 +200,7 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
         roomId,
         roomName: room.name,
         eventType: 'class_cancelled',
-        message: `❌ ${room.currentBooking.className} cancelled in ${room.name}`,
+        message: `${room.currentBooking.className} cancelled in ${room.name}`,
       }
 
       let newLogs = [logEntry, ...state.activityLog]

@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Figtree } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import AppSidebar from "@/components/AppSidebar";
+import AppShell from "@/components/AppShell";
 
 const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
 
@@ -33,15 +31,8 @@ export default function RootLayout({
       lang="en"
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", figtree.variable)}
     >
-      <body className="min-h-full">
-        <TooltipProvider>
-          <SidebarProvider>
-            <AppSidebar />
-            <main className="w-full">
-              {children}
-            </main>
-          </SidebarProvider>
-        </TooltipProvider>
+      <body className="min-h-full bg-background text-foreground">
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

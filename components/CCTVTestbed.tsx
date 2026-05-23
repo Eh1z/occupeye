@@ -184,8 +184,8 @@ export default function CCTVTestbed({ room, onDetectionComplete }: CCTVTestbedPr
       {/* Detection Result */}
       {detectionResult && (
         <div className="rounded-lg bg-green-100 p-4 dark:bg-green-900/30">
-          <p className="text-sm font-bold text-green-700 dark:text-green-300">
-            ✓ Success! Detected: <span className="text-2xl">{detectionResult.count}</span> persons
+              <p className="text-sm font-bold text-green-700 dark:text-green-300">
+            Success! Detected: <span className="text-2xl">{detectionResult.count}</span> persons
           </p>
           <p className="mt-2 text-xs text-green-600 dark:text-green-400">
             Green boxes show detected people. The room status below will update automatically.
@@ -258,7 +258,7 @@ export default function CCTVTestbed({ room, onDetectionComplete }: CCTVTestbedPr
 
       {/* Helper Text */}
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
-        <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
           <FileText className="h-4 w-4" />
           What happens:
         </div>

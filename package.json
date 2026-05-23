@@ -6,15 +6,20 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:db": "node ./scripts/seed.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
+    "@better-auth/mongo-adapter": "^1.6.11",
     "@tensorflow-models/coco-ssd": "^2.2.3",
     "@tensorflow/tfjs": "^4.22.0",
+    "better-auth": "^1.6.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dotenv": "^17.4.2",
     "lucide-react": "^1.16.0",
+    "mongodb": "^7.2.0",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
