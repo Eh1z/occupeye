@@ -9,12 +9,12 @@ import { Circle, Shield, EyeOff } from 'lucide-react'
 import type { AuthRole } from '@/lib/auth'
 
 const INITIAL_ROOMS: Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy'>[] = [
-  { id: 'room-a', name: 'Room A', capacity: 20, currentOccupants: 0 },
-  { id: 'room-b', name: 'Room B', capacity: 30, currentOccupants: 0 },
-  { id: 'room-c', name: 'Room C', capacity: 25, currentOccupants: 0 },
-  { id: 'room-d', name: 'Room D', capacity: 35, currentOccupants: 0 },
-  { id: 'room-e', name: 'Room E', capacity: 40, currentOccupants: 0 },
-  { id: 'room-f', name: 'Room F', capacity: 28, currentOccupants: 0 },
+  { id: 'classroom-a', name: 'Classroom A', capacity: 20, currentOccupants: 0 },
+  { id: 'classroom-b', name: 'Classroom B', capacity: 30, currentOccupants: 0 },
+  { id: 'classroom-c', name: 'Classroom C', capacity: 25, currentOccupants: 0 },
+  { id: 'classroom-d', name: 'Classroom D', capacity: 35, currentOccupants: 0 },
+  { id: 'classroom-e', name: 'Classroom E', capacity: 40, currentOccupants: 0 },
+  { id: 'classroom-f', name: 'Classroom F', capacity: 28, currentOccupants: 0 },
 ]
 
 type RoomsClientProps = {
