@@ -13,5 +13,5 @@ export default async function RoomsPage() {
     redirect('/sign-in')
   }
 
-  return <RoomsClient role={session.user.role as AuthRole} />
+  return <RoomsClient role={session.user.role as AuthRole} userName={session.user.name || session.user.email || ''} />
 }

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 export interface Booking {
   id: string
@@ -7,6 +8,7 @@ export interface Booking {
   instructor: string
   bookedAt: number
   blockedUntil: number // Room unavailable for booking until this time (occupancy detection time + 2 hours)
+  bookedBy?: string
 }
 
 export interface LectureHall {
@@ -55,7 +57,7 @@ interface RoomStoreState {
   updateOccupancy: (roomId: string, occupantCount: number) => void
 
   // Booking actions
-  bookClass: (roomId: string, className: string, instructor: string) => void
+  bookClass: (roomId: string, className: string, instructor: string, bookedBy?: string) => void
   cancelBooking: (roomId: string, bookingId: string) => void
   checkLectureHall: (roomId: string) => string | null
 
@@ -70,9 +72,11 @@ interface RoomStoreState {
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000
 
-export const useRoomStore = create<RoomStoreState>((set, get) => ({
-  rooms: {},
-  activityLog: [],
+export const useRoomStore = create<RoomStoreState>()(
+  persist(
+    (set, get) => ({
+      rooms: {},
+      activityLog: [],
 
   initializeRooms: (halls) => {
     const initialRooms: Record<string, LectureHall> = {}
@@ -155,7 +159,7 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
     })
   },
 
-  bookClass: (roomId, className, instructor) => {
+  bookClass: (roomId, className, instructor, bookedBy) => {
     set((state) => {
       const room = state.rooms[roomId]
       if (!room) return state
@@ -173,12 +177,16 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
         className,
         instructor,
         bookedAt: now,
-        blockedUntil: room.blockedUntil,
+        blockedUntil: now + TWO_HOURS_MS,
+        bookedBy: bookedBy,
       }
 
       const updatedRoom: LectureHall = {
         ...room,
         currentBooking: booking,
+        // mark as blocked so UI shows it as taken
+        isBlockedForBooking: true,
+        blockedUntil: booking.blockedUntil,
       }
 
       const logEntry: ActivityLog = {
@@ -187,7 +195,7 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
         roomId,
         roomName: room.name,
         eventType: 'class_booked',
-        message: `${className} by ${instructor} booked in ${room.name}`,
+        message: `${className} by ${instructor}${bookedBy ? ' (booked by ' + bookedBy + ')' : ''} booked in ${room.name}`,
       }
 
       let newLogs = [logEntry, ...state.activityLog]
@@ -208,6 +216,9 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
       const updatedRoom: LectureHall = {
         ...room,
         currentBooking: null,
+        // release booking block
+        isBlockedForBooking: false,
+        blockedUntil: 0,
       }
 
       const logEntry: ActivityLog = {
@@ -290,4 +301,14 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
   getRecentLogs: (count = 20) => {
     return get().activityLog.slice(0, count)
   },
-}))
+}),
+    {
+      name: 'occupeye-room-store',
+      storage: createJSONStorage(() => (typeof window === 'undefined' ? undefined : window.localStorage) as any),
+      partialize: (state) => ({
+        rooms: state.rooms,
+        activityLog: state.activityLog,
+      }),
+    }
+  )
+)

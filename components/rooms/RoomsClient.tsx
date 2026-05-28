@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRoomStore, type LectureHall } from '@/lib/store/useRoomStore'
 import CCTVTestbed from '@/components/CCTVTestbed'
+import ActivityLogComponent from '@/components/ActivityLog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Circle, Shield, EyeOff } from 'lucide-react'
@@ -13,21 +14,23 @@ type InitialLectureHall = Omit<LectureHall, 'status' | 'currentBooking' | 'isBlo
 }
 
 const INITIAL_ROOMS: InitialLectureHall[] = [
-  { id: 'classroom-a', name: 'Classroom A', capacity: 20, currentOccupants: 0 },
-  { id: 'classroom-b', name: 'Classroom B', capacity: 30, currentOccupants: 0 },
-  { id: 'classroom-c', name: 'Classroom C', capacity: 25, currentOccupants: 0 },
-  { id: 'classroom-d', name: 'Classroom D', capacity: 35, currentOccupants: 0 },
-  { id: 'classroom-e', name: 'Classroom E', capacity: 40, currentOccupants: 0 },
-  { id: 'classroom-f', name: 'Classroom F', capacity: 28, currentOccupants: 0 },
+  { id: 'room-a', name: 'Classroom A', capacity: 20, currentOccupants: 0 },
+  { id: 'room-b', name: 'Classroom B', capacity: 30, currentOccupants: 0 },
+  { id: 'room-c', name: 'Classroom C', capacity: 25, currentOccupants: 0 },
+  { id: 'room-d', name: 'Classroom D', capacity: 35, currentOccupants: 0 },
+  { id: 'room-e', name: 'Classroom E', capacity: 40, currentOccupants: 0 },
+  { id: 'room-f', name: 'Classroom F', capacity: 28, currentOccupants: 0 },
 ]
 
 type RoomsClientProps = {
   role: AuthRole
+  userName?: string
 }
 
-export default function RoomsClient({ role }: RoomsClientProps) {
+export default function RoomsClient({ role, userName }: RoomsClientProps) {
   const store = useRoomStore()
   const [selectedRoomId, setSelectedRoomId] = useState<string>('room-a')
+  const [bookingData, setBookingData] = useState({ className: '', instructor: '' })
   const [selectedRoomCheckMessage, setSelectedRoomCheckMessage] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const initializedRef = useRef(false)
@@ -47,6 +50,7 @@ export default function RoomsClient({ role }: RoomsClientProps) {
   const rooms = Object.values(store.rooms)
   const selectedRoom = store.rooms[selectedRoomId] || rooms[0]
   const canManageRooms = role !== 'student'
+  const canBook = role === 'student' || role === 'lecturer' || role === 'admin'
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950">
@@ -180,7 +184,93 @@ export default function RoomsClient({ role }: RoomsClientProps) {
                 </CardContent>
               </Card>
 
-              {!canManageRooms ? (
+              {canBook ? (
+                <div className="flex flex-1 flex-col gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">Book Classroom</CardTitle>
+                      <CardDescription>Reserve this classroom for a lecture or event.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {selectedRoom.currentBooking ? (
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Current Booking</p>
+                          <p className="text-sm">{selectedRoom.currentBooking.className} — <span className="text-xs text-slate-600">{selectedRoom.currentBooking.instructor}</span></p>
+                          {selectedRoom.currentBooking.bookedBy && (
+                            <p className="text-xs text-slate-500">Booked by {selectedRoom.currentBooking.bookedBy}</p>
+                          )}
+                          <div className="flex gap-2">
+                            {role === 'admin' && (
+                              <button
+                                className="inline-flex items-center justify-center rounded-lg bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-700"
+                                onClick={() => store.cancelBooking(selectedRoom.id, selectedRoom.currentBooking!.id)}
+                              >
+                                Cancel Booking
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs text-slate-600">Class name</label>
+                            <input
+                              value={bookingData.className}
+                              onChange={(e) => setBookingData({ ...bookingData, className: e.target.value })}
+                              className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-600">Instructor</label>
+                            <input
+                              value={bookingData.instructor}
+                              onChange={(e) => setBookingData({ ...bookingData, instructor: e.target.value })}
+                              className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700"
+                              onClick={() => {
+                                if (!bookingData.className || !bookingData.instructor) {
+                                  alert('Please fill class name and instructor')
+                                  return
+                                }
+                                store.bookClass(selectedRoom.id, bookingData.className, bookingData.instructor, userName)
+                                setBookingData({ className: '', instructor: '' })
+                              }}
+                            >
+                              Book Now
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {canManageRooms && (
+                      <Card className="flex-1 overflow-hidden">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">Upload CCTV</CardTitle>
+                        </CardHeader>
+                        <CardContent className="overflow-y-auto">
+                          <CCTVTestbed
+                            room={selectedRoom}
+                            onDetectionComplete={(occupantCount) => {
+                              store.updateOccupancy(selectedRoom.id, occupantCount)
+                            }}
+                          />
+                        </CardContent>
+                      </Card>
+                    )}
+
+                  {role === 'admin' && (
+                    <div>
+                      <ActivityLogComponent logs={store.getRecentLogs(20)} />
+                    </div>
+                  )}
+                </div>
+              ) : (
                 <Card className="border-dashed border-blue-200 bg-blue-50/80 dark:border-blue-800 dark:bg-blue-950/20">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -188,23 +278,9 @@ export default function RoomsClient({ role }: RoomsClientProps) {
                       Student view
                     </CardTitle>
                     <CardDescription>
-                      Students can review room availability only. Booking, CCTV, and occupancy changes are reserved for lecturers and admins.
+                      Students can review room availability only. Booking, CCTV, and occupancy changes are reserved for staff.
                     </CardDescription>
                   </CardHeader>
-                </Card>
-              ) : (
-                <Card className="flex-1 overflow-hidden">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Upload CCTV</CardTitle>
-                  </CardHeader>
-                  <CardContent className="overflow-y-auto">
-                    <CCTVTestbed
-                      room={selectedRoom}
-                      onDetectionComplete={(occupantCount) => {
-                        store.updateOccupancy(selectedRoom.id, occupantCount)
-                      }}
-                    />
-                  </CardContent>
                 </Card>
               )}
             </>

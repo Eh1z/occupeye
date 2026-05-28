@@ -62,6 +62,7 @@ export default function DashboardClient({ role, userName }: DashboardClientProps
     readyHalls: store.getLectureReadyRooms().length,
   }
   const recentLogs = store.getRecentLogs(5)
+  const bookedRooms = Object.values(store.rooms).filter((r) => r.currentBooking)
 
   const isStudent = role === 'student'
   const isLecturer = role === 'lecturer'
@@ -179,16 +180,46 @@ export default function DashboardClient({ role, userName }: DashboardClientProps
           </div>
 
           <div>
-            <h2 className="mb-4 text-xl font-semibold text-slate-900 dark:text-white">Recent Activity</h2>
-            <Card className="border-slate-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
-              <CardContent className="pt-6">
-                {recentLogs.length > 0 ? (
-                  <ActivityLog logs={recentLogs} />
-                ) : (
-                  <p className="text-center text-sm text-slate-500 dark:text-slate-400">No activity yet</p>
-                )}
-              </CardContent>
-            </Card>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <h2 className="mb-4 text-xl font-semibold text-slate-900 dark:text-white">Booked Classrooms</h2>
+                <Card className="border-slate-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+                  <CardContent>
+                    {bookedRooms.length > 0 ? (
+                      <ul className="space-y-3">
+                        {bookedRooms.map((room) => (
+                          <li key={room.id} className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-slate-900 dark:text-white">{room.name}</p>
+                              <p className="text-sm text-slate-600 dark:text-slate-400">{room.currentBooking?.className} — <span className="text-xs">{room.currentBooking?.instructor}</span></p>
+                              {room.currentBooking?.bookedBy && (
+                                <p className="text-xs text-slate-500">Booked by {room.currentBooking?.bookedBy}</p>
+                              )}
+                            </div>
+                            <div className="text-sm text-slate-500 dark:text-slate-400">Taken</div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-center text-sm text-slate-500 dark:text-slate-400">No booked classrooms</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div>
+                <h2 className="mb-4 text-xl font-semibold text-slate-900 dark:text-white">Recent Activity</h2>
+                <Card className="border-slate-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+                  <CardContent className="pt-6">
+                    {recentLogs.length > 0 ? (
+                      <ActivityLog logs={recentLogs} />
+                    ) : (
+                      <p className="text-center text-sm text-slate-500 dark:text-slate-400">No activity yet</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
 
           <Card className="border-amber-200 bg-amber-50/90 dark:border-amber-800 dark:bg-amber-900/20">
