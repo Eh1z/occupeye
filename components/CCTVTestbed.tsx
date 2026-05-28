@@ -140,11 +140,10 @@ export default function CCTVTestbed({ room, onDetectionComplete }: CCTVTestbedPr
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`flex flex-col items-center justify-center gap-3 rounded-lg border-3 border-dashed py-16 transition-all ${
-          isDragging
-            ? 'border-green-500 bg-green-50 dark:border-green-400 dark:bg-green-900/20'
-            : 'border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 dark:border-slate-600 dark:bg-slate-800 dark:hover:border-blue-400 dark:hover:bg-slate-800/50'
-        } cursor-pointer`}
+        className={`flex flex-col items-center justify-center gap-3 rounded-lg border-3 border-dashed py-16 transition-all ${isDragging
+          ? 'border-green-500 bg-green-50 dark:border-green-400 dark:bg-green-900/20'
+          : 'border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 dark:border-slate-600 dark:bg-slate-800 dark:hover:border-blue-400 dark:hover:bg-slate-800/50'
+          } cursor-pointer`}
       >
         <Upload className="h-12 w-12 text-slate-400" />
         <div className="text-center">
@@ -184,12 +183,14 @@ export default function CCTVTestbed({ room, onDetectionComplete }: CCTVTestbedPr
       {/* Detection Result */}
       {detectionResult && (
         <div className="rounded-lg bg-green-100 p-4 dark:bg-green-900/30">
-              <p className="text-sm font-bold text-green-700 dark:text-green-300">
-            Success! Detected: <span className="text-2xl">{detectionResult.count}</span> persons
+          <p className="text-sm font-bold text-green-700 dark:text-green-300">
+            Success! Detected: <span className="text-2xl">{detectionResult.count}</span> persons in the full image
           </p>
-          <p className="mt-2 text-xs text-green-600 dark:text-green-400">
-            Green boxes show detected people. The room status below will update automatically.
-          </p>
+          {detectionResult.count > 0 && (
+            <p className="mt-2 text-sm font-medium text-green-700 dark:text-green-300">
+              This classroom is occupied and a lecture is ongoing.
+            </p>
+          )}
         </div>
       )}
 
@@ -258,14 +259,15 @@ export default function CCTVTestbed({ room, onDetectionComplete }: CCTVTestbedPr
 
       {/* Helper Text */}
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
           <FileText className="h-4 w-4" />
           What happens:
         </div>
         <ol className="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-400">
-          <li>1. AI scans the photo for people</li>
-          <li>2. Shows green boxes around each person</li>
-          <li>3. Automatically updates room occupancy</li>
+          <li>1. AI scans the full photo for people</li>
+          <li>2. Shows green boxes around every detected person</li>
+          <li>3. Counts groups larger than four and updates occupancy</li>
+          <li>4. Uses full image analysis to detect crowded rooms reliably</li>
         </ol>
       </div>
     </div>

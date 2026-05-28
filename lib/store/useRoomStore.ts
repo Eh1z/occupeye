@@ -14,6 +14,7 @@ export interface LectureHall {
   name: string
   capacity: number
   currentOccupants: number
+  equipment: string[]
   status: 'empty' | 'occupied'
   lastOccupancyUpdate: number // When occupancy was last detected
   lastOccupancyUpdateBy: 'manual' | 'simulation'
@@ -23,12 +24,22 @@ export interface LectureHall {
   anomalyDetected: boolean // Occupied but not booked
 }
 
+export type InitialLectureHall = Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy' | 'equipment'> & {
+  equipment?: string[]
+}
+
 export interface ActivityLog {
   id: string
   timestamp: number
   roomId: string
   roomName: string
-  eventType: 'occupancy_detected' | 'class_booked' | 'class_cancelled' | 'anomaly_detected' | 'room_available'
+  eventType:
+  | 'occupancy_detected'
+  | 'class_booked'
+  | 'class_cancelled'
+  | 'anomaly_detected'
+  | 'room_available'
+  | 'lecture_hall_checked'
   message: string
   occupantCount?: number
 }
@@ -38,7 +49,7 @@ interface RoomStoreState {
   activityLog: ActivityLog[]
 
   // Initialization
-  initializeRooms: (halls: Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy'>[]) => void
+  initializeRooms: (halls: InitialLectureHall[]) => void
 
   // Occupancy (from CCTV detection)
   updateOccupancy: (roomId: string, occupantCount: number) => void
@@ -46,12 +57,14 @@ interface RoomStoreState {
   // Booking actions
   bookClass: (roomId: string, className: string, instructor: string) => void
   cancelBooking: (roomId: string, bookingId: string) => void
+  checkLectureHall: (roomId: string) => string | null
 
   // Computed getters
   getTotalHalls: () => number
   getOccupiedRooms: () => LectureHall[]
   getAvailableRooms: () => LectureHall[]
   getBlockedRooms: () => LectureHall[]
+  getLectureReadyRooms: () => LectureHall[]
   getRecentLogs: (count?: number) => ActivityLog[]
 }
 
@@ -66,6 +79,7 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
     halls.forEach((hall) => {
       initialRooms[hall.id] = {
         ...hall,
+        equipment: hall.equipment || ['projector', 'whiteboard', 'audio'],
         status: 'empty',
         currentBooking: null,
         isBlockedForBooking: false,
@@ -106,14 +120,16 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
 
       // Log occupancy change
       if (isNowOccupied !== wasOccupied) {
+        const eventType: ActivityLog['eventType'] = isNowOccupied ? 'occupancy_detected' : 'room_available'
+        const isLectureInProgress = occupantCount > 4
         const logEntry: ActivityLog = {
           id: `log_${Date.now()}_${Math.random()}`,
           timestamp: now,
           roomId,
           roomName: room.name,
-          eventType: 'occupancy_detected',
+          eventType,
           message: isNowOccupied
-            ? `${room.name}: Occupied by ${occupantCount} persons. Available for booking in 2 hours.`
+            ? `${room.name}: Occupied by ${occupantCount} persons. Lecture is ongoing and room is blocked for 2 hours.`
             : `${room.name}: Now empty. Available for immediate booking.`,
           occupantCount,
         }
@@ -213,6 +229,40 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
     })
   },
 
+  checkLectureHall: (roomId) => {
+    const room = get().rooms[roomId]
+    if (!room) return null
+
+    const now = Date.now()
+    const isFree = room.status === 'empty' && !room.isBlockedForBooking
+    const requiredEquipment = ['projector', 'whiteboard', 'audio']
+    const missingEquipment = requiredEquipment.filter((item) => !room.equipment.includes(item))
+    const equipmentReady = missingEquipment.length === 0
+    const readyForLecture = isFree && equipmentReady
+
+    const message = `${room.name} is ${room.status === 'occupied' ? 'occupied' : 'free'}. Lecture-ready: ${readyForLecture ? 'yes' : 'no'}. Equipment ${equipmentReady ? 'complete' : 'missing ' + missingEquipment.join(', ')}.`
+
+    const logEntry: ActivityLog = {
+      id: `log_${now}_${Math.random()}`,
+      timestamp: now,
+      roomId,
+      roomName: room.name,
+      eventType: 'lecture_hall_checked',
+      message,
+      occupantCount: room.currentOccupants,
+    }
+
+    set((state) => {
+      const newLogs = [logEntry, ...state.activityLog].slice(0, 100)
+      return {
+        ...state,
+        activityLog: newLogs,
+      }
+    })
+
+    return message
+  },
+
   getTotalHalls: () => {
     return Object.keys(get().rooms).length
   },
@@ -227,6 +277,14 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
 
   getBlockedRooms: () => {
     return Object.values(get().rooms).filter((r) => r.isBlockedForBooking)
+  },
+
+  getLectureReadyRooms: () => {
+    const requiredEquipment = ['projector', 'whiteboard', 'audio']
+    return Object.values(get().rooms).filter((room) => {
+      const hasEquipment = requiredEquipment.every((item) => room.equipment.includes(item))
+      return room.status === 'empty' && !room.isBlockedForBooking && hasEquipment
+    })
   },
 
   getRecentLogs: (count = 20) => {

@@ -15,7 +15,11 @@ import {
 } from '@/components/ui/select'
 import type { AuthRole } from '@/lib/auth'
 
-const INITIAL_ROOMS: Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy'>[] = [
+type InitialLectureHall = Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy' | 'equipment'> & {
+  equipment?: string[]
+}
+
+const INITIAL_ROOMS: InitialLectureHall[] = [
   { id: 'room-a', name: 'Room A', capacity: 20, currentOccupants: 0 },
   { id: 'room-b', name: 'Room B', capacity: 30, currentOccupants: 0 },
   { id: 'room-c', name: 'Room C', capacity: 25, currentOccupants: 0 },
@@ -83,13 +87,12 @@ export default function CCTVClient({ role }: CCTVClientProps) {
             <div className="flex flex-1 items-center gap-4">
               <div className="flex items-center gap-2">
                 <Circle
-                  className={`h-3 w-3 fill-current ${
-                    selectedRoom.status === 'occupied'
-                      ? 'text-red-500'
-                      : selectedRoom.isBlockedForBooking
-                        ? 'text-amber-500'
-                        : 'text-green-500'
-                  }`}
+                  className={`h-3 w-3 fill-current ${selectedRoom.status === 'occupied'
+                    ? 'text-red-500'
+                    : selectedRoom.isBlockedForBooking
+                      ? 'text-amber-500'
+                      : 'text-green-500'
+                    }`}
                 />
                 <span className="font-medium text-slate-900 dark:text-white">
                   {selectedRoom.status === 'occupied'

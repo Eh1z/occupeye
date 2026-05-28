@@ -23,7 +23,11 @@ import { Badge } from '@/components/ui/badge'
 import { AlertTriangle, Bookmark, LogsIcon, CheckCircle, Shield } from 'lucide-react'
 import type { AuthRole } from '@/lib/auth'
 
-const INITIAL_ROOMS: Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy'>[] = [
+type InitialLectureHall = Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy' | 'equipment'> & {
+  equipment?: string[]
+}
+
+const INITIAL_ROOMS: InitialLectureHall[] = [
   { id: 'room-a', name: 'Room A', capacity: 20, currentOccupants: 0 },
   { id: 'room-b', name: 'Room B', capacity: 30, currentOccupants: 0 },
   { id: 'room-c', name: 'Room C', capacity: 25, currentOccupants: 0 },
@@ -80,6 +84,8 @@ export default function LogsClient({ role }: LogsClientProps) {
         return <Bookmark className="h-4 w-4 text-blue-500" />
       case 'room_available':
         return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'lecture_hall_checked':
+        return <LogsIcon className="h-4 w-4 text-cyan-500" />
       default:
         return <LogsIcon className="h-4 w-4 text-slate-500" />
     }
@@ -97,6 +103,8 @@ export default function LogsClient({ role }: LogsClientProps) {
         return <Badge variant="outline">Cancelled</Badge>
       case 'room_available':
         return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Available</Badge>
+      case 'lecture_hall_checked':
+        return <Badge className="bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200">Lecture Check</Badge>
       default:
         return <Badge>{eventType}</Badge>
     }
@@ -173,6 +181,7 @@ export default function LogsClient({ role }: LogsClientProps) {
                     <SelectItem value="class_booked">Class Booked</SelectItem>
                     <SelectItem value="class_cancelled">Class Cancelled</SelectItem>
                     <SelectItem value="room_available">Room Available</SelectItem>
+                    <SelectItem value="lecture_hall_checked">Lecture Readiness Check</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

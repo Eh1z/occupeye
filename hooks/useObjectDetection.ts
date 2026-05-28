@@ -65,11 +65,24 @@ export function useObjectDetection(): UseObjectDetectionReturn {
     }
 
     try {
-      const predictions = await modelRef.current.detect(imageElement as HTMLImageElement)
+      let sourceElement: HTMLImageElement | HTMLCanvasElement = imageElement
 
-      // Filter for person class and score > 0.45
+      if (imageElement instanceof HTMLImageElement) {
+        const canvas = document.createElement('canvas')
+        canvas.width = imageElement.naturalWidth || imageElement.width
+        canvas.height = imageElement.naturalHeight || imageElement.height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) throw new Error('Unable to create canvas context')
+        ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height)
+        sourceElement = canvas
+      }
+
+      const predictions = await modelRef.current.detect(sourceElement)
+
+      // Filter for person class and score > 0.35 to capture more people in a crowded frame
+      // This detects the full image and counts all person boxes found.
       const personPredictions = predictions
-        .filter((pred) => pred.class === 'person' && pred.score > 0.45)
+        .filter((pred) => pred.class === 'person' && pred.score > 0.35)
         .map((pred) => ({
           class: pred.class,
           score: pred.score,

@@ -11,7 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import type { AuthRole } from '@/lib/auth'
 
-const INITIAL_ROOMS: Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy'>[] = [
+type InitialLectureHall = Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy' | 'equipment'> & {
+  equipment?: string[]
+}
+
+const INITIAL_ROOMS: InitialLectureHall[] = [
   { id: 'room-a', name: 'Room A', capacity: 20, currentOccupants: 0 },
   { id: 'room-b', name: 'Room B', capacity: 30, currentOccupants: 0 },
   { id: 'room-c', name: 'Room C', capacity: 25, currentOccupants: 0 },
@@ -55,6 +59,7 @@ export default function DashboardClient({ role, userName }: DashboardClientProps
     totalHalls: store.getTotalHalls(),
     occupiedHalls: store.getOccupiedRooms().length,
     availableHalls: store.getAvailableRooms().length,
+    readyHalls: store.getLectureReadyRooms().length,
   }
   const recentLogs = store.getRecentLogs(5)
 
@@ -99,22 +104,22 @@ export default function DashboardClient({ role, userName }: DashboardClientProps
 
   const gettingStarted = isStudent
     ? [
-        'Open Rooms to see current availability.',
-        'Use the dashboard to monitor which halls are occupied.',
-        'Contact a lecturer if you need a booking or CCTV review.',
-      ]
+      'Open Rooms to see current availability.',
+      'Use the dashboard to monitor which halls are occupied.',
+      'Contact a lecturer if you need a booking or CCTV review.',
+    ]
     : isLecturer
       ? [
-          'Review the dashboard metrics and recent activity.',
-          'Use Rooms to manage bookings and inspect room state.',
-          'Use CCTV Detection when occupancy needs confirmation.',
-          'Check Logs to audit room changes and anomalies.',
-        ]
+        'Review the dashboard metrics and recent activity.',
+        'Use Rooms to manage bookings and inspect room state.',
+        'Use CCTV Detection when occupancy needs confirmation.',
+        'Check Logs to audit room changes and anomalies.',
+      ]
       : [
-          'Use the dashboard to monitor the full system.',
-          'Admin Users lets you change account roles later.',
-          'Rooms, CCTV, and Logs are available for operational control.',
-        ]
+        'Use the dashboard to monitor the full system.',
+        'Admin Users lets you change account roles later.',
+        'Rooms, CCTV, and Logs are available for operational control.',
+      ]
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
@@ -147,6 +152,7 @@ export default function DashboardClient({ role, userName }: DashboardClientProps
               totalHalls={metrics.totalHalls}
               occupiedHalls={metrics.occupiedHalls}
               availableHalls={metrics.availableHalls}
+              readyHalls={metrics.readyHalls}
             />
           </div>
 

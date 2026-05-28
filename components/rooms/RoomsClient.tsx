@@ -8,7 +8,11 @@ import { Badge } from '@/components/ui/badge'
 import { Circle, Shield, EyeOff } from 'lucide-react'
 import type { AuthRole } from '@/lib/auth'
 
-const INITIAL_ROOMS: Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy'>[] = [
+type InitialLectureHall = Omit<LectureHall, 'status' | 'currentBooking' | 'isBlockedForBooking' | 'blockedUntil' | 'anomalyDetected' | 'lastOccupancyUpdate' | 'lastOccupancyUpdateBy' | 'equipment'> & {
+  equipment?: string[]
+}
+
+const INITIAL_ROOMS: InitialLectureHall[] = [
   { id: 'classroom-a', name: 'Classroom A', capacity: 20, currentOccupants: 0 },
   { id: 'classroom-b', name: 'Classroom B', capacity: 30, currentOccupants: 0 },
   { id: 'classroom-c', name: 'Classroom C', capacity: 25, currentOccupants: 0 },
@@ -24,6 +28,7 @@ type RoomsClientProps = {
 export default function RoomsClient({ role }: RoomsClientProps) {
   const store = useRoomStore()
   const [selectedRoomId, setSelectedRoomId] = useState<string>('room-a')
+  const [selectedRoomCheckMessage, setSelectedRoomCheckMessage] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const initializedRef = useRef(false)
 
@@ -65,22 +70,20 @@ export default function RoomsClient({ role }: RoomsClientProps) {
               <button
                 key={room.id}
                 onClick={() => setSelectedRoomId(room.id)}
-                className={`w-full rounded-lg border-2 p-3 text-left transition-all ${
-                  selectedRoomId === room.id
-                    ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20'
-                    : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600'
-                }`}
+                className={`w-full rounded-lg border-2 p-3 text-left transition-all ${selectedRoomId === room.id
+                  ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20'
+                  : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600'
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Circle
-                      className={`h-3 w-3 fill-current ${
-                        room.status === 'occupied'
-                          ? 'text-red-500'
-                          : room.isBlockedForBooking
-                            ? 'text-amber-500'
-                            : 'text-green-500'
-                      }`}
+                      className={`h-3 w-3 fill-current ${room.status === 'occupied'
+                        ? 'text-red-500'
+                        : room.isBlockedForBooking
+                          ? 'text-amber-500'
+                          : 'text-green-500'
+                        }`}
                     />
                     <div>
                       <p className="font-medium text-slate-900 dark:text-white">{room.name}</p>
@@ -106,13 +109,12 @@ export default function RoomsClient({ role }: RoomsClientProps) {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{selectedRoom.name}</CardTitle>
                     <Circle
-                      className={`h-3 w-3 fill-current ${
-                        selectedRoom.status === 'occupied'
-                          ? 'text-red-500'
-                          : selectedRoom.isBlockedForBooking
-                            ? 'text-amber-500'
-                            : 'text-green-500'
-                      }`}
+                      className={`h-3 w-3 fill-current ${selectedRoom.status === 'occupied'
+                        ? 'text-red-500'
+                        : selectedRoom.isBlockedForBooking
+                          ? 'text-amber-500'
+                          : 'text-green-500'
+                        }`}
                     />
                   </div>
                 </CardHeader>
@@ -132,6 +134,48 @@ export default function RoomsClient({ role }: RoomsClientProps) {
                         {Math.round((selectedRoom.currentOccupants / selectedRoom.capacity) * 100)}%
                       </p>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Lecture Hall Readiness</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/50">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Equipment</p>
+                      <p className="mt-2 text-sm text-slate-900 dark:text-white">
+                        {selectedRoom.equipment.join(' · ')}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/50">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Lecture Ready</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
+                        {selectedRoom.status === 'empty' && !selectedRoom.isBlockedForBooking && selectedRoom.equipment.includes('projector') && selectedRoom.equipment.includes('whiteboard') && selectedRoom.equipment.includes('audio')
+                          ? 'Yes'
+                          : 'No'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const message = store.checkLectureHall(selectedRoom.id)
+                        setSelectedRoomCheckMessage(message)
+                      }}
+                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                    >
+                      Check Hall Status
+                    </button>
+                    {selectedRoomCheckMessage && (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                        {selectedRoomCheckMessage}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

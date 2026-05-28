@@ -20,6 +20,8 @@ export default function ActivityLogComponent({ logs }: ActivityLogProps) {
         return <XCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
       case 'room_available':
         return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+      case 'lecture_hall_checked':
+        return <Calendar className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
       default:
         return <Users className="h-4 w-4 text-slate-600 dark:text-slate-400" />
     }
